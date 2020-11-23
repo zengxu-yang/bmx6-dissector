@@ -33,6 +33,8 @@
 //TODO delete
 #include <stdio.h>
 
+#include "packet-bmx6.c.hf"
+
 #define PROTO_TAG_BMX    "BMX6"
 static const value_string bmx_frame_types[] = {
     { FRAME_TYPE_RSVD0, "RSVD frame" },
@@ -174,7 +176,7 @@ dissect_link_req(tvbuff_t *tvb, proto_tree *tree, int offset){
     guint32 dest_id;
     
     dest_id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 4, "Destination local id: 0x%x", dest_id);
+    proto_tree_add_item(tree, hf_bmx6_destination_local_id, tvb, offset, 4, ENC_BIG_ENDIAN);
     return offset+4;
 }
 
@@ -188,22 +190,21 @@ dissect_link_adv(tvbuff_t *tvb, proto_tree *tree, int offset, int end){
     proto_item *ti;
     
     dev_sqn = tvb_get_ntohs(tvb, offset);
-    ti = proto_tree_add_text(tree, tvb, offset, 2, "Device sequence number: %u",
-                                dev_sqn);
+    ti = proto_tree_add_item(tree, hf_bmx6_device_sequence_number, tvb, offset, 2, ENC_BIG_ENDIAN);
     links = proto_item_add_subtree(ti, ett_bmx6_message);
     offset +=2;
     int i =1;
     while(end > offset){
-        ti = proto_tree_add_text(links, tvb, offset, 6, "Link [%i]:", i);
+        ti = proto_tree_add_item(links, hf_bmx6_link, tvb, offset, 6, ENC_BIG_ENDIAN);
         link_tree = proto_item_add_subtree(ti, ett_bmx6_link);
         tx_dev = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(link_tree, tvb, offset, 1, "Transmitter device id: %u", tx_dev);
+        proto_tree_add_item(link_tree, hf_bmx6_transmitter_device_id, tvb, offset, 1, ENC_NA);
         offset ++;
         peer_dev = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(link_tree, tvb, offset, 1, "Peer device id: %u", peer_dev);
+        proto_tree_add_item(link_tree, hf_bmx6_peer_device_id, tvb, offset, 1, ENC_NA);
         offset ++;
         peer_id = tvb_get_ntohl(tvb, offset);
-        proto_tree_add_text(link_tree, tvb, offset, 4, "Peer local id: 0x%x", peer_id);
+        proto_tree_add_item(link_tree, hf_bmx6_peer_local_id, tvb, offset, 4, ENC_BIG_ENDIAN);
         proto_item_append_text(ti, "    to 0x%x:dev%u", peer_id, peer_dev);
         offset +=4;
         i++;
@@ -215,7 +216,7 @@ dissect_link_adv(tvbuff_t *tvb, proto_tree *tree, int offset, int end){
 static int
 dissect_dev_req(tvbuff_t *tvb, proto_tree *tree, int offset){
     guint32 dst_id = tvb_get_ntohl(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 4, "Destination local id: 0x%x", dst_id);
+    proto_tree_add_item(tree, hf_bmx6_destination_local_id, tvb, offset, 4, ENC_BIG_ENDIAN);
     return offset+4;
 }
 
@@ -233,45 +234,32 @@ dissect_dev_adv(tvbuff_t *tvb, proto_tree *tree, int offset, int end){
     proto_item *ti;
     
     dev_sqn = tvb_get_ntohs(tvb, offset);
-    ti = proto_tree_add_text(tree, tvb, offset, 2, "Device sequence number: %u", 
-                        dev_sqn);
+    ti = proto_tree_add_item(tree, hf_bmx6_device_sequence_number, tvb, offset, 2, ENC_BIG_ENDIAN);
     devices = proto_item_add_subtree(ti, ett_bmx6_message);
     offset+=2;
     i =1;
     while(offset < end){
-        ti = proto_tree_add_text(devices, tvb, offset, 6, "Device [%i]:", i);
+        ti = proto_tree_add_item(devices, hf_bmx6_device, tvb, offset, 6, ENC_BIG_ENDIAN);
         device_tree = proto_item_add_subtree(ti, ett_bmx6_link);
         dev_idx = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(device_tree, tvb, offset, 1, "Device index: %u", 
-                            dev_idx);
+        proto_tree_add_item(device_tree, hf_bmx6_device_index, tvb, offset, 1, ENC_NA);
         offset++;
         channel = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(device_tree, tvb, offset, 1, "Channel: %u", 
-                            channel);
+        proto_tree_add_item(device_tree, hf_bmx6_channel, tvb, offset, 1, ENC_NA);
         offset++;
         tx_min.val.u8 = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(device_tree, tvb, offset, 1, 
-                            "Transmitter min bitrate: %u^%u = %f", 
-                            tx_min.val.f.mantissa_fmu8, tx_min.val.f.exp_fmu8, 
-                            pow(tx_min.val.f.mantissa_fmu8,
-                                tx_min.val.f.exp_fmu8));
+        proto_tree_add_item(device_tree, hf_bmx6_transmitter_min_bitrate, tvb, offset, 1, ENC_NA);
         offset++;
         tx_max.val.u8 = tvb_get_guint8(tvb, offset);
-        proto_tree_add_text(device_tree, tvb, offset, 1, 
-                            "Transmitter max bitrate: %u^%u = %f",
-                            tx_max.val.f.mantissa_fmu8, tx_max.val.f.exp_fmu8, 
-                            pow(tx_max.val.f.mantissa_fmu8, 
-                                tx_max.val.f.exp_fmu8));
+        proto_tree_add_item(device_tree, hf_bmx6_transmitter_max_bitrate, tvb, offset, 1, ENC_NA);
         offset++;
         tvb_get_ipv6(tvb, offset, &ipv6);
         inet_ntop(AF_INET6, &ipv6, str, INET6_ADDRSTRLEN);
-        proto_tree_add_text(device_tree, tvb, offset, 16, "Local IPv6: %s", 
-                            str);
+        proto_tree_add_item(device_tree, hf_bmx6_local_ipv6, tvb, offset, 16, ENC_BIG_ENDIAN);
         proto_item_append_text(ti, "    ip address: %s", str);
         offset += 16;
         mac = tvb_get_ntoh48(tvb, offset);
-        proto_tree_add_text(device_tree, tvb, offset, 6, "Mac address: 0x%x",
-                            mac);
+        proto_tree_add_item(device_tree, hf_bmx6_mac_address, tvb, offset, 6, ENC_BIG_ENDIAN);
         offset +=6;
         i++;
     }
@@ -286,15 +274,12 @@ dissect_hash_req(tvbuff_t *tvb, proto_tree *tree, int offset, int end){
     proto_tree *requests;
     
     dst_id = tvb_get_ntohl(tvb, offset);
-    ti = proto_tree_add_text(tree, tvb, offset, 4, 
-                                "Destination local id: 0x%x", dst_id);
+    ti = proto_tree_add_item(tree, hf_bmx6_destination_local_id, tvb, offset, 4, ENC_BIG_ENDIAN);
     requests = proto_item_add_subtree(ti, ett_bmx6_message);
     offset += 4;
     i =1;
     while(offset<end){
-        proto_tree_add_text(requests, tvb, offset, 2, 
-                            "Request [%i]:    receiver id: %u", 
-                            tvb_get_ntohs(tvb, offset));
+        proto_tree_add_item(requests, hf_bmx6_request, tvb, offset, 2, ENC_BIG_ENDIAN);
         offset += 2;
         i++;
     }
@@ -309,13 +294,11 @@ dissect_hash_adv(tvbuff_t *tvb, proto_item *ti, int offset){
     
     tree = proto_item_add_subtree(ti, ett_bmx6_message);
     transmitter_iid = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "TransmitterIID4x: %u", 
-                        transmitter_iid);
+    proto_tree_add_item(tree, hf_bmx6_transmitteriid4x, tvb, offset, 2, ENC_BIG_ENDIAN);
     proto_item_append_text(ti, "    from %u", transmitter_iid);
     offset +=2;
-    hash = tvb_bytes_to_str(tvb, offset, HASH_SHA1_LEN);
-    proto_tree_add_text(tree, tvb, offset, HASH_SHA1_LEN, 
-                        "Description hash: %s", hash);
+    hash = tvb_bytes_to_str(NULL, tvb, offset, HASH_SHA1_LEN);
+    proto_tree_add_item(tree, hf_bmx6_description_hash, tvb, offset, HASH_SHA1_LEN, ENC_BIG_ENDIAN);
     proto_item_set_len(ti, 2 + HASH_SHA1_LEN);
     offset += HASH_SHA1_LEN;
     return offset;
@@ -374,7 +357,7 @@ dissect_bmx6_tlv(tvbuff_t *tvb, proto_item *tlv_item, int offset){
     }
     
     //TLV header
-    th_item = proto_tree_add_text(tlv, tvb, offset, -1, "TLV header: ");
+    th_item = proto_tree_add_item(tlv, hf_bmx6_tlv_header, tvb, offset, -1, ENC_NA);
     tlv_header= proto_item_add_subtree(th_item, ett_bmx6_tlv_header);
     //is_short
     bit_offset = offset*8;
@@ -396,7 +379,7 @@ dissect_bmx6_tlv(tvbuff_t *tvb, proto_item *tlv_item, int offset){
         header_length = FRAME_HEADER_SHORT_LEN;
     }else{
         //TODO reserved
-        proto_tree_add_text(tlv_header, tvb, offset, 1, "Reserved bytes");
+        proto_tree_add_item(tlv_header, hf_bmx6_reserved_bytes, tvb, offset, 1, ENC_NA);
         offset++;
         length = tvb_get_ntohs(tvb, offset);
         proto_tree_add_item(tlv_header, hf_bmx6_frame_length16, tvb, offset, 2, ENC_BIG_ENDIAN);
@@ -436,54 +419,47 @@ dissect_desc_adv16(tvbuff_t *tvb, proto_item *ti, int offset){
     
     tree = proto_item_add_subtree(ti, ett_bmx6_message);
     transmitter_iid = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "TransmitterIID4x: %u", 
-                        transmitter_iid);
+    proto_tree_add_item(tree, hf_bmx6_transmitteriid4x, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
-    name = tvb_get_ephemeral_string(tvb, offset, DESCRIPTION0_ID_NAME_LEN);
-    proto_tree_add_text(tree, tvb, offset, DESCRIPTION0_ID_NAME_LEN, 
-                        "Name : %s", name);
+    name = tvb_get_string_enc(NULL, tvb, offset, DESCRIPTION0_ID_NAME_LEN, ENC_ASCII);
+    proto_tree_add_item(tree, hf_bmx6_name, tvb, offset, DESCRIPTION0_ID_NAME_LEN, ENC_BIG_ENDIAN);
     offset += DESCRIPTION0_ID_NAME_LEN;
-    pkid = tvb_bytes_to_str(tvb, offset, HASH_SHA1_LEN);
-    proto_tree_add_text(tree, tvb, offset, HASH_SHA1_LEN, "pkid: 0x%s", pkid);
+    pkid = tvb_bytes_to_str(NULL, tvb, offset, HASH_SHA1_LEN);
+    proto_tree_add_item(tree, hf_bmx6_pkid, tvb, offset, HASH_SHA1_LEN, ENC_BIG_ENDIAN);
     offset+=HASH_SHA1_LEN;
     code_version = tvb_get_ntohs(tvb,offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Code version: %u", code_version);
+    proto_tree_add_item(tree, hf_bmx6_code_version, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset+=2;
     capabilities = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Capabilities: 0x%x", 
-        capabilities);
+    proto_tree_add_item(tree, hf_bmx6_capabilities, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     dsc_sqn = tvb_get_ntohs(tvb,offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Description sequence number: %u",
-                        dsc_sqn);
+    proto_tree_add_item(tree, hf_bmx6_description_sequence_number, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     min = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Originator message min sqn: %u", 
-                        min);
+    proto_tree_add_item(tree, hf_bmx6_originator_message_min_sqn, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     range = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Originator message range: %u", 
-                        range);
+    proto_tree_add_item(tree, hf_bmx6_originator_message_range, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     tx_int = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Transmission interval: %u", 
-                        tx_int);
+    proto_tree_add_item(tree, hf_bmx6_transmission_interval, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     reserved_ttl = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 1, "Reserved TTL: %u", reserved_ttl);
+    proto_tree_add_item(tree, hf_bmx6_reserved_ttl, tvb, offset, 1, ENC_NA);
     offset++;
     reserved = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 1, "Reserved: %u", reserved);
+    proto_tree_add_item(tree, hf_bmx6_reserved, tvb, offset, 1, ENC_NA);
     offset++;
     extension_len = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Extension Length: %u", 
-                        extension_len);
+    proto_tree_add_item(tree, hf_bmx6_extension_length, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     proto_item_set_len(ti, extension_len + MSG_DESC_ADV_SZ);
     //Dissect TLVs:
     i=1;
+    processed = 0;
     while(processed < extension_len ){
-        tlv_item = proto_tree_add_text(tree, tvb, offset, -1, "TLV [%u]: ", i);
+        tlv_item = proto_tree_add_item(tree, hf_bmx6_tlv, tvb, offset, -1, ENC_BIG_ENDIAN);
         n = dissect_bmx6_tlv(tvb, tlv_item, offset);
         offset += n;
         processed +=n;
@@ -504,47 +480,43 @@ dissect_desc_adv(tvbuff_t *tvb, proto_item *ti, int offset) {
     
     tree = proto_item_add_subtree(ti, ett_bmx6_message);
     transmitterIID4x = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "TransmitterIID4x: %u", 
-                        transmitterIID4x);
+    proto_tree_add_item(tree, hf_bmx6_transmitteriid4x, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
-    name = tvb_get_ephemeral_string(tvb, offset, DESCRIPTION0_ID_NAME_LEN);
-    proto_tree_add_text(tree, tvb, offset, DESCRIPTION0_ID_NAME_LEN,
-                        "Name : %s", name);
+    name = tvb_get_string_enc(NULL, tvb, offset, DESCRIPTION0_ID_NAME_LEN, ENC_ASCII);
+    proto_tree_add_item(tree, hf_bmx6_name, tvb, offset, DESCRIPTION0_ID_NAME_LEN, ENC_BIG_ENDIAN);
     offset += DESCRIPTION0_ID_NAME_LEN;
     rand = tvb_get_letoh64(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 8, "Random part of the name: 0x%x", 
-                        rand);
+    proto_tree_add_item(tree, hf_bmx6_random_part_of_the_name, tvb, offset, 8, ENC_BIG_ENDIAN);
     offset += 8;
     version = tvb_get_ntohs(tvb,offset);
-    proto_tree_add_text(tree, tvb, offset,2, "Code version: %u", version);
+    proto_tree_add_item(tree, hf_bmx6_code_version, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset += 2;
     tlvs_len = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Description TLVs length: %u", 
-                        tlvs_len);
+    proto_tree_add_item(tree, hf_bmx6_description_tlvs_length, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     dsc_sqn = tvb_get_ntohs(tvb,offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Description sequence number: %u",
-                        dsc_sqn);
+    proto_tree_add_item(tree, hf_bmx6_description_sequence_number, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     cap = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Capabilities: 0x%x", cap);
+    proto_tree_add_item(tree, hf_bmx6_capabilities, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     min = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Originator message min sqn: %u", min);
+    proto_tree_add_item(tree, hf_bmx6_originator_message_min_sqn, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     range = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Originator message range: %u", range);
+    proto_tree_add_item(tree, hf_bmx6_originator_message_range, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     tx_int = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 2, "Transmission interval: %u", tx_int);
+    proto_tree_add_item(tree, hf_bmx6_transmission_interval, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset +=2;
     ttl = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 1, "Max TTL: %u", ttl);
+    proto_tree_add_item(tree, hf_bmx6_max_ttl, tvb, offset, 1, ENC_NA);
     offset++;
     //Dissect TLVs:
     i=1;
+    processed = 0;
     while(processed < tlvs_len ){
-        tlv_item = proto_tree_add_text(tree, tvb, offset, -1, "TLV [%u]: ", i);
+        tlv_item = proto_tree_add_item(tree, hf_bmx6_tlv, tvb, offset, -1, ENC_BIG_ENDIAN);
         length = dissect_bmx6_tlv(tvb, tlv_item, offset);
         offset += length;
         processed += length;
@@ -567,35 +539,30 @@ dissect_ogm_adv(tvbuff_t *tvb, proto_tree *tree, int offset, int end){
     proto_item *ti;
     
     aggr_sqn = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 1, "Aggregation sequence number: %u",
-                        aggr_sqn);
+    proto_tree_add_item(tree, hf_bmx6_aggregation_sequence_number, tvb, offset, 1, ENC_NA);
     offset++;
     dest = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 1, "OGM destination array: 0x%x", 
-                        dest);
+    proto_tree_add_item(tree, hf_bmx6_ogm_destination_array, tvb, offset, 1, ENC_NA);
     offset++;
     //Skip the destination bytes
     offset += dest;
     i=1;
     neigh=0;
     while(offset<end){
-        ti = proto_tree_add_text(tree, tvb, offset, 4, "OGM [%i]", i);
+        ti = proto_tree_add_item(tree, hf_bmx6_ogm, tvb, offset, 4, ENC_BIG_ENDIAN);
         ogm = proto_item_add_subtree(ti, ett_bmx6_message);
         mix = tvb_get_ntohs(tvb, offset);
-        proto_tree_add_text(ogm, tvb, offset, 2, "Mix : 0x%x", mix);
+        proto_tree_add_item(ogm, hf_bmx6_mix, tvb, offset, 2, ENC_BIG_ENDIAN);
         offset += 2;
         ogm_offset = ((mix >> OGM_IIDOFFST_BIT_POS) & OGM_IIDOFFST_MASK);
         if(ogm_offset == OGM_IID_RSVD_JUMP){
             absolute = tvb_get_ntohs(tvb, offset);
-            proto_tree_add_text(tree, tvb, offset, 2, "%u. IID: %d", i, 
-                absolute);
+            proto_tree_add_item(tree, hf_bmx6_iid, tvb, offset, 2, ENC_BIG_ENDIAN);
             offset += 2;
             neigh = absolute;
         } else{
             ogm_sqn = tvb_get_ntohs(tvb, offset);
-            proto_tree_add_text(tree, tvb, offset, 2, 
-                        "%u. OGM sequence number: %u. IID jump from %d to %d", 
-                        i, ogm_sqn, neigh, neigh+ogm_offset);
+            proto_tree_add_item(tree, hf_bmx6_ogm_sequence_number, tvb, offset, 2, ENC_BIG_ENDIAN);
             offset +=2;
             neigh += ogm_offset;
         }
@@ -612,12 +579,12 @@ dissect_ogm_ack(tvbuff_t *tvb, proto_tree *tree, int offset){
     
     //OGM destination:
     dest = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 1, "Destination: 0x%x", dest);
+    proto_tree_add_item(tree, hf_bmx6_destination, tvb, offset, 1, ENC_NA);
     offset++;
     
     //Aggregation sqn being ack'ed:
     sqn = tvb_get_guint8(tvb, offset);
-    proto_tree_add_text(tree, tvb, offset, 1, "Aggregation sequence number: %u", sqn);
+    proto_tree_add_item(tree, hf_bmx6_aggregation_sequence_number, tvb, offset, 1, ENC_NA);
     offset++;
     
     return offset;
@@ -632,8 +599,7 @@ dissect_frame_header(tvbuff_t *tvb, proto_tree *frame_tree, unsigned int offset,
     guint8 is_short;
     unsigned int bit_offset, header_length;
     
-    header_item = proto_tree_add_text(frame_tree, tvb, offset, -1, 
-                                        "Frame header: ");
+    header_item = proto_tree_add_item(frame_tree, hf_bmx6_frame_header, tvb, offset, -1, ENC_NA);
     header_tree = proto_item_add_subtree(header_item, ett_bmx6_frame_header);
     
     //is_short
@@ -656,7 +622,7 @@ dissect_frame_header(tvbuff_t *tvb, proto_tree *frame_tree, unsigned int offset,
         offset++;
         header_length = FRAME_HEADER_SHORT_LEN;
     }else{
-        proto_tree_add_text(header_tree, tvb, offset, 1, "Reserved bytes");
+        proto_tree_add_item(header_tree, hf_bmx6_reserved_bytes, tvb, offset, 1, ENC_NA);
         offset++;
         (*length) = tvb_get_ntohs(tvb, offset);
         proto_tree_add_item(header_tree, hf_bmx6_frame_length16, tvb, offset, 2,
@@ -683,9 +649,7 @@ dissect_bmx6_frame(tvbuff_t *tvb, proto_tree *bmx_tree, int version,
     initial = offset;
     //Add the frame subtree:
     type = tvb_get_guint8(tvb, offset) & 0x1f;
-    frame_item = proto_tree_add_text(bmx_tree, tvb, offset, -1,
-                                     val_to_str(type, bmx_frame_types, 
-                                                "Unknown frame type: %u"));
+    frame_item = proto_tree_add_item(bmx_tree, hf_bmx6_frame_type, tvb, offset, 1, ENC_NA);
     switch(type) {
     case FRAME_TYPE_HELLO_ADV:
         frame_tree = proto_item_add_subtree(frame_item, ett_bmx6_hello_adv);
@@ -693,8 +657,7 @@ dissect_bmx6_frame(tvbuff_t *tvb, proto_tree *bmx_tree, int version,
         proto_item_set_len(frame_item, length);
         i = 1;
         while ( offset - initial < length) {
-            message_item = proto_tree_add_text(frame_tree, tvb, offset, 2, 
-                                                "Hello [%u]:",i);
+            message_item = proto_tree_add_item(frame_tree, hf_bmx6_hello, tvb, offset, 2, ENC_BIG_ENDIAN);
             i++;
             offset = dissect_hello_adv(tvb, message_item, offset, version);
         }
@@ -716,7 +679,7 @@ dissect_bmx6_frame(tvbuff_t *tvb, proto_tree *bmx_tree, int version,
         break;
     case FRAME_TYPE_DEV_REQ:
         frame_tree = proto_item_add_subtree(frame_item, ett_bmx6_dev_req);
-        offset = dissect_frame_header(tvb, frame_tree, offset, initial+length);
+        offset = dissect_frame_header(tvb, frame_tree, offset, &length);
         proto_item_set_len(frame_item, length);
         while ( offset - initial < length) {
             offset = dissect_dev_req(tvb, frame_tree, offset);
@@ -741,8 +704,7 @@ dissect_bmx6_frame(tvbuff_t *tvb, proto_tree *bmx_tree, int version,
         proto_item_set_len(frame_item, length);
         i = 1;
         while ( offset - initial < length) {
-            message_item = proto_tree_add_text(frame_tree, tvb, offset, -1, 
-                                                "Hash [%i]", i);
+            message_item = proto_tree_add_item(frame_tree, hf_bmx6_hash, tvb, offset, -1, ENC_BIG_ENDIAN);
             offset = dissect_hash_adv(tvb, message_item, offset);
             i++;
         }
@@ -760,15 +722,13 @@ dissect_bmx6_frame(tvbuff_t *tvb, proto_tree *bmx_tree, int version,
         i = 1;
         if (version >= 16){
             while ( offset - initial < length) {
-                message_item = proto_tree_add_text(frame_tree, tvb, offset, -1,
-                                                    "Description [%i]", i);
+                message_item = proto_tree_add_item(frame_tree, hf_bmx6_description, tvb, offset, -1, ENC_BIG_ENDIAN);
                 offset = dissect_desc_adv16(tvb, message_item, offset);
                 i++;
             }
         }else{
             while ( offset - initial < length) {
-                message_item = proto_tree_add_text(frame_tree, tvb, offset, -1,
-                                                    "Description [%i]", i);
+                message_item = proto_tree_add_item(frame_tree, hf_bmx6_description, tvb, offset, -1, ENC_BIG_ENDIAN);
                 offset = dissect_desc_adv(tvb,frame_tree,offset);
                 i++;
             }
@@ -797,8 +757,8 @@ dissect_bmx6_frame(tvbuff_t *tvb, proto_tree *bmx_tree, int version,
     }
     return initial+length;
 }
-static void
-dissect_bmx6(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
+static int
+dissect_bmx6(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 {
     int offset = 0;
     int version,i;
@@ -807,12 +767,9 @@ dissect_bmx6(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
     proto_tree *bmx_tree = NULL;
     proto_tree *bmx_header_tree = NULL;
     
-    if (check_col(pinfo->cinfo, COL_PROTOCOL))
-        col_set_str(pinfo->cinfo, COL_PROTOCOL, PROTO_TAG_BMX);
+    col_set_str(pinfo->cinfo, COL_PROTOCOL, PROTO_TAG_BMX);
     /* Clear out stuff in the info column */
-    if(check_col(pinfo->cinfo,COL_INFO)){
-        col_clear(pinfo->cinfo,COL_INFO);
-    }
+    col_clear(pinfo->cinfo,COL_INFO);
 
     /* Dissect packet header */
     if (tree) { /* we are being asked for details */
@@ -842,10 +799,12 @@ dissect_bmx6(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
         offset +=1;
         
            /* Do frames */
-        while(tvb_length(tvb) - offset > 0){
+        while(tvb_captured_length(tvb) - offset > 0){
             offset = dissect_bmx6_frame(tvb, bmx_tree, version, offset);
         }
     }
+
+    return tvb_captured_length(tvb);
 }
 
 void
@@ -853,6 +812,7 @@ proto_register_bmx6(void)
 {
     //BMX6 fields: (used for filters)
     static hf_register_info hf[] = {
+#include "packet-bmx6.c.hf_array"
     { &hf_bmx6_version,
           { "version", "bmx6.version", FT_UINT8, BASE_DEC, NULL, 0x0,
                 "BMX6 VERSION", HFILL }},
