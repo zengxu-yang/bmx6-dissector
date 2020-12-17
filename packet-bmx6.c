@@ -35,6 +35,13 @@
 
 #include "packet-bmx6.c.hf"
 
+#define DEBUG
+#ifdef DEBUG
+#define my_print(...) g_print(__VA_ARGS__)
+#else
+#define my_print(...)
+#endif
+
 #define PROTO_TAG_BMX    "BMX6"
 static const value_string bmx_frame_types[] = {
     { FRAME_TYPE_RSVD0, "RSVD frame" },
@@ -459,7 +466,7 @@ dissect_desc_adv16(tvbuff_t *tvb, proto_item *ti, int offset){
     i=1;
     processed = 0;
     while(processed < extension_len ){
-        tlv_item = proto_tree_add_item(tree, hf_bmx6_tlv, tvb, offset, -1, ENC_BIG_ENDIAN);
+        tlv_item = proto_tree_add_item(tree, hf_bmx6_tlv, tvb, offset, -1, ENC_NA);
         n = dissect_bmx6_tlv(tvb, tlv_item, offset);
         offset += n;
         processed +=n;

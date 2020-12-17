@@ -28,7 +28,7 @@
       { &hf_bmx6_reserved_ttl, { "Reserved TTL", "bmx6.reserved_ttl", FT_UINT8, BASE_DEC, NULL, 0x0, NULL, HFILL }},
       { &hf_bmx6_reserved, { "Reserved", "bmx6.reserved", FT_UINT8, BASE_DEC, NULL, 0x0, NULL, HFILL }},
       { &hf_bmx6_extension_length, { "Extension Length", "bmx6.extension_length", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
-      { &hf_bmx6_tlv, { "TLV", "bmx6.tlv", FT_UINT32, BASE_DEC, NULL, 0x0, NULL, HFILL }},
+      { &hf_bmx6_tlv, { "TLV", "bmx6.tlv", FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL }},
       { &hf_bmx6_random_part_of_the_name, { "Random part of the name", "bmx6.random_part_of_the_name", FT_UINT64, BASE_HEX, NULL, 0x0, NULL, HFILL }},
       { &hf_bmx6_description_tlvs_length, { "Description TLVs length", "bmx6.description_tlvs_length", FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }},
       { &hf_bmx6_max_ttl, { "Max TTL", "bmx6.max_ttl", FT_UINT8, BASE_DEC, NULL, 0x0, NULL, HFILL }},
